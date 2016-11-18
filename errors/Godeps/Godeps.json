@@ -1,0 +1,11 @@
+{
+	"ImportPath": "github.com/tilteng/go-errors/errors",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
+	"Deps": [
+		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Rev": "3d4f2ba23642d3cfd06bd4b54cf03d99d95c0f1b"
+		}
+	]
+}
