@@ -33,24 +33,24 @@ func TestInterface(t *testing.T) {
 }
 
 func TestStackTrace(t *testing.T) {
-	err := ErrInternalServerError.New(0)
+	err := ErrInternalServerError.New()
 	if err.StackTrace == nil {
-		t.Error("ErrInternalServerError.New(0): StackTrace is nil")
+		t.Error("ErrInternalServerError.New: StackTrace is nil")
 	}
 
-	err = ErrInternalServerError.New(400)
+	err = ErrJSONSchemaValidationFailed.New()
 	if err.StackTrace != nil {
-		t.Error("ErrInternalServerError.New(400): StackTrace is not nil")
+		t.Error("ErrJSONSchemaValidationFailed.New(): StackTrace is not nil")
 	}
 
-	err = ErrInternalServerError.NewWithStack(400, 0)
+	err = ErrJSONSchemaValidationFailed.NewWithStack(0)
 	if err.StackTrace == nil {
-		t.Error("ErrInternalServerError.NewWithStack(400): StackTrace is nil")
+		t.Error("ErrJSONSchemaValidationFailed.NewWithStack(): StackTrace is nil")
 	}
 }
 
 func TestErrorAsJSON(t *testing.T) {
-	err := ErrInternalServerError.New(0)
+	err := ErrInternalServerError.New()
 	js, _ := err.AsJSON()
 	m := make(map[string]interface{})
 	e := json.Unmarshal([]byte(js), &m)
@@ -85,7 +85,7 @@ func TestErrorAsJSON(t *testing.T) {
 }
 
 func TestErrorJSONAPI(t *testing.T) {
-	err := ErrInternalServerError.New(0)
+	err := ErrInternalServerError.New()
 	jsonapi_err := err.AsJSONAPIError()
 
 	m := toMap(t, jsonapi_err)
@@ -108,8 +108,8 @@ func TestErrorJSONAPI(t *testing.T) {
 
 func TestErrorsJSONAPI(t *testing.T) {
 	errs := make(Errors, 0, 2)
-	errs.AddError(ErrInternalServerError.New(0))
-	errs.AddError(ErrJSONSchemaValidationFailed.New(0))
+	errs.AddError(ErrInternalServerError.New())
+	errs.AddError(ErrJSONSchemaValidationFailed.New())
 
 	jsonapi_errs := errs.AsJSONAPIResponse()
 
@@ -140,8 +140,8 @@ func TestErrorsJSONAPI(t *testing.T) {
 
 func TestErrorsJSON(t *testing.T) {
 	errs := make(Errors, 0, 2)
-	errs.AddError(ErrInternalServerError.New(400))
-	errs.AddError(ErrJSONSchemaValidationFailed.New(500))
+	errs.AddError(ErrJSONSchemaValidationFailed.New())
+	errs.AddError(ErrInternalServerError.New())
 
 	jsonapi_errs := errs.AsJSONAPIResponse()
 
@@ -160,12 +160,12 @@ func TestErrorsJSON(t *testing.T) {
 	}
 
 	err := errors[0].(map[string]interface{})
-	if err["code"].(string) != ErrInternalServerError.Code {
+	if err["code"].(string) != ErrJSONSchemaValidationFailed.Code {
 		t.Errorf("First error is (%+v), not ErrInternalServerError", err)
 	}
 
 	err = errors[1].(map[string]interface{})
-	if err["code"].(string) != ErrJSONSchemaValidationFailed.Code {
+	if err["code"].(string) != ErrInternalServerError.Code {
 		t.Errorf("First error is (%+v), not ErrJSONSchemaValidationFailed", err)
 	}
 

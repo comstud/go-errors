@@ -15,29 +15,26 @@ type ErrorClass struct {
 	Description string `json:"description"`
 }
 
-func (self *ErrorClass) newError(status int, forceFrames bool, skip int) *Error {
-	if status == 0 {
-		status = self.Status
-	}
+func (self *ErrorClass) newError(forceFrames bool, skip int) *Error {
 	err := &Error{
 		ErrorClass: *self,
 		ID:         Config.ErrIDGenerator.GenErrID(),
-		Status:     status,
+		Status:     self.Status,
 	}
-	if status >= 500 || forceFrames {
+	if err.Status >= 500 || forceFrames {
 		err.StackTrace = GetStackTrace(1 + skip)
 	}
 	return err
 }
 
 // Create an instance of an error
-func (self *ErrorClass) New(status int) *Error {
-	return self.newError(status, false, 1)
+func (self *ErrorClass) New() *Error {
+	return self.newError(false, 1)
 }
 
 // Create an instance of an error, including a stacktrace
-func (self *ErrorClass) NewWithStack(status int, skip int) *Error {
-	return self.newError(status, true, 1+skip)
+func (self *ErrorClass) NewWithStack(skip int) *Error {
+	return self.newError(true, 1+skip)
 }
 
 // Interface that both Error and Errors satisfies
