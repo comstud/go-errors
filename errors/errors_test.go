@@ -19,6 +19,19 @@ func toMap(t *testing.T, v interface{}) map[string]interface{} {
 	return m
 }
 
+func TestInterface(t *testing.T) {
+	var err interface{} = &Error{}
+	var errs interface{} = &Errors{}
+
+	if _, ok := err.(ErrorType); !ok {
+		t.Error("Error does not satisfy ErrorType")
+	}
+
+	if _, ok := errs.(ErrorType); !ok {
+		t.Error("Errors does not satisfy ErrorType")
+	}
+}
+
 func TestStackTrace(t *testing.T) {
 	err := ErrInternalServerError.New(0)
 	if err.StackTrace == nil {
@@ -127,8 +140,8 @@ func TestErrorsJSONAPI(t *testing.T) {
 
 func TestErrorsJSON(t *testing.T) {
 	errs := make(Errors, 0, 2)
-	errs.AddError(ErrInternalServerError.New(0))
-	errs.AddError(ErrJSONSchemaValidationFailed.New(0))
+	errs.AddError(ErrInternalServerError.New(400))
+	errs.AddError(ErrJSONSchemaValidationFailed.New(500))
 
 	jsonapi_errs := errs.AsJSONAPIResponse()
 
@@ -154,5 +167,17 @@ func TestErrorsJSON(t *testing.T) {
 	err = errors[1].(map[string]interface{})
 	if err["code"].(string) != ErrJSONSchemaValidationFailed.Code {
 		t.Errorf("First error is (%+v), not ErrJSONSchemaValidationFailed", err)
+	}
+
+	if errs.GetStatus() != 400 {
+		j, _ := errs.AsJSON()
+		t.Errorf("Status is not the status of the first error: %s", j)
+	}
+
+	errs[0], errs[1] = errs[1], errs[0]
+
+	if errs.GetStatus() != 500 {
+		j, _ := errs.AsJSON()
+		t.Errorf("Status is not the status of the first error: %s", j)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"runtime"
 )
 
+// Error class used to define errors
 type ErrorClass struct {
 	Name        string `json:"name"`
 	Code        string `json:"code"`
@@ -29,14 +30,24 @@ func (self *ErrorClass) newError(status int, forceFrames bool, skip int) *Error 
 	return err
 }
 
+// Create an instance of an error
 func (self *ErrorClass) New(status int) *Error {
 	return self.newError(status, false, 1)
 }
 
+// Create an instance of an error, including a stacktrace
 func (self *ErrorClass) NewWithStack(status int, skip int) *Error {
 	return self.newError(status, true, 1+skip)
 }
 
+// Interface that both Error and Errors satisfies
+type ErrorType interface {
+	GetStatus() int
+	AsJSON() (string, error)
+	AsJSONAPIResponse() *JSONAPIErrorResponse
+}
+
+// An instance of an error
 type Error struct {
 	ErrorClass `json:"class"`
 	// Default is ErrorClass.Status
@@ -46,6 +57,10 @@ type Error struct {
 	StackTrace      StackTrace  `json:"stack_trace"`
 	InternalError   string      `json:"internal_error"`
 	InternalDetails interface{} `json:"internal_details"`
+}
+
+func (self *Error) GetStatus() int {
+	return self.Status
 }
 
 func (self *Error) SetInternal(v interface{}) {
@@ -86,10 +101,15 @@ func (self *Error) AsJSON() (string, error) {
 type Errors []*Error
 
 func (self *Errors) AddError(err *Error) {
+	if *self == nil {
+		*self = make([]*Error, 1, 10)
+		(*self)[0] = err
+		return
+	}
 	*self = append(*self, err)
 }
 
-func (self *Errors) AsJSON() (string, error) {
+func (self Errors) AsJSON() (string, error) {
 	byt, err := json.Marshal(self)
 	if err != nil {
 		return "", err
@@ -97,10 +117,19 @@ func (self *Errors) AsJSON() (string, error) {
 	return string(byt), nil
 }
 
-func (self *Errors) AsJSONAPIResponse() *JSONAPIErrorResponse {
-	errors := []*Error(*self)
-	jsonapi_errors := make(JSONAPIErrors, len(errors), len(errors))
-	for i, err := range errors {
+func (self Errors) GetStatus() int {
+	if self == nil || len(self) == 0 {
+		return 0
+	}
+	return self[0].GetStatus()
+}
+
+func (self Errors) AsJSONAPIResponse() *JSONAPIErrorResponse {
+	if self == nil {
+		return nil
+	}
+	jsonapi_errors := make(JSONAPIErrors, len(self), len(self))
+	for i, err := range self {
 		jsonapi_errors[i] = err.AsJSONAPIError()
 	}
 	return &JSONAPIErrorResponse{
