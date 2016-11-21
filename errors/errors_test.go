@@ -49,6 +49,24 @@ func TestStackTrace(t *testing.T) {
 	}
 }
 
+func TestNewWithDetails(t *testing.T) {
+	err := ErrInternalServerError.New("test")
+	if err.InternalDetails.(string) != "test" {
+		t.Error("InternalDetails not set correctly")
+	}
+	if err.InternalError != "test" {
+		t.Error("InternalError not set correctly")
+	}
+
+	err = ErrInternalServerError.NewWithStack(0, "test")
+	if err.InternalDetails.(string) != "test" {
+		t.Error("InternalDetails not set correctly")
+	}
+	if err.InternalError != "test" {
+		t.Error("InternalError not set correctly")
+	}
+}
+
 func TestErrorAsJSON(t *testing.T) {
 	err := ErrInternalServerError.New()
 	js, _ := err.AsJSON()
