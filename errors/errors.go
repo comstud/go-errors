@@ -66,6 +66,8 @@ func (self *Error) SetInternal(v interface{}) {
 		self.InternalError = s.String()
 	} else if e, ok := v.(error); ok {
 		self.InternalError = e.Error()
+	} else if e, ok := v.(string); ok {
+		self.InternalError = e
 	}
 }
 
