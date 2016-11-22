@@ -3,6 +3,7 @@ package errors
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,21 @@ func toMap(t *testing.T, v interface{}) map[string]interface{} {
 		t.Fatal(err)
 	}
 	return m
+}
+
+func TestIncludedErrors(t *testing.T) {
+	if len(RegisteredErrors) != 3 {
+		t.Errorf("Registered errors is not 3: %+v", RegisteredErrors)
+	}
+	for k, _ := range RegisteredErrors {
+		idx := strings.LastIndex(k, ".")
+		name := k[idx+1:]
+		if name != "ErrInternalServerError" &&
+			name != "ErrJSONSchemaValidationFailed" &&
+			name != "ErrInternalError" {
+			t.Errorf("Unexpected error registered: %s", k)
+		}
+	}
 }
 
 func TestInterface(t *testing.T) {
