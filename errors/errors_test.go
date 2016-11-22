@@ -6,6 +6,14 @@ import (
 	"testing"
 )
 
+type E1 struct{}
+
+func (self *E1) Error() string { return "woot1" }
+
+type E2 struct{}
+
+func (self *E2) String() string { return "woot2" }
+
 func toMap(t *testing.T, v interface{}) map[string]interface{} {
 	m := make(map[string]interface{})
 	byt, err := json.Marshal(v)
@@ -33,24 +41,36 @@ func TestInterface(t *testing.T) {
 }
 
 func TestStackTrace(t *testing.T) {
-	err := ErrInternalServerError.New()
+	err := ErrInternalServerError.New("")
 	if err.StackTrace == nil {
 		t.Error("ErrInternalServerError.New: StackTrace is nil")
 	}
 
-	err = ErrJSONSchemaValidationFailed.New()
+	err = ErrJSONSchemaValidationFailed.New("")
 	if err.StackTrace != nil {
 		t.Error("ErrJSONSchemaValidationFailed.New(): StackTrace is not nil")
 	}
 
-	err = ErrJSONSchemaValidationFailed.NewWithStack(0)
+	err = ErrJSONSchemaValidationFailed.NewWithStack("", 0)
 	if err.StackTrace == nil {
 		t.Error("ErrJSONSchemaValidationFailed.NewWithStack(): StackTrace is nil")
 	}
 }
 
 func TestNewWithDetails(t *testing.T) {
-	err := ErrInternalServerError.New("test")
+	err := ErrInternalServerError.New("test1")
+	if err.Details != "test1" {
+		t.Error("Details not set correctly")
+	}
+
+	err = ErrInternalServerError.NewWithStack("test2", 0)
+	if err.Details != "test2" {
+		t.Error("Details not set correctly")
+	}
+}
+
+func TestSetInternal(t *testing.T) {
+	err := ErrInternalServerError.New("").SetInternal("test")
 	if err.InternalDetails.(string) != "test" {
 		t.Error("InternalDetails not set correctly")
 	}
@@ -58,17 +78,44 @@ func TestNewWithDetails(t *testing.T) {
 		t.Error("InternalError not set correctly")
 	}
 
-	err = ErrInternalServerError.NewWithStack(0, "test")
+	err = ErrInternalServerError.NewWithStack("", 0).SetInternal("test")
 	if err.InternalDetails.(string) != "test" {
 		t.Error("InternalDetails not set correctly")
 	}
 	if err.InternalError != "test" {
 		t.Error("InternalError not set correctly")
+	}
+
+	e1 := &E1{}
+	e2 := &E2{}
+
+	err = ErrInternalServerError.New("").SetInternal(e1)
+	if err.InternalDetails.(*E1) != e1 {
+		t.Error("InternalDetails not set correctly from e1")
+	}
+	if err.InternalError != "woot1" {
+		t.Error("InternalError not set correctly from e1.Error()")
+	}
+
+	err = ErrInternalServerError.New("").SetInternal(e2)
+	if err.InternalDetails.(*E2) != e2 {
+		t.Error("InternalDetails not set correctly from e2")
+	}
+	if err.InternalError != "woot2" {
+		t.Error("InternalError not set correctly from e2.String()")
 	}
 }
 
 func TestErrorAsJSON(t *testing.T) {
-	err := ErrInternalServerError.New()
+	err := ErrInternalServerError.New(
+		"details",
+	).SetInternal(
+		"internal",
+	).SetMetadata(
+		make(map[string]interface{}),
+	).SetInternalMetadata(
+		make(map[string]interface{}),
+	)
 	js, _ := err.AsJSON()
 	m := make(map[string]interface{})
 	e := json.Unmarshal([]byte(js), &m)
@@ -77,7 +124,7 @@ func TestErrorAsJSON(t *testing.T) {
 	}
 
 	if len(m) != 7 {
-		t.Error("More than 7 keys in json from AsJSON")
+		t.Errorf("Didn't find 7 keys in json from AsJSON: %+v", m)
 	}
 
 	for _, k := range []string{
@@ -103,16 +150,16 @@ func TestErrorAsJSON(t *testing.T) {
 }
 
 func TestErrorJSONAPI(t *testing.T) {
-	err := ErrInternalServerError.New()
+	err := ErrInternalServerError.New("details")
 	jsonapi_err := err.AsJSONAPIError()
 
 	m := toMap(t, jsonapi_err)
 
-	if len(m) != 4 {
-		t.Error("More than 4 keys in jsonapi errors container")
+	if len(m) != 5 {
+		t.Error("Didn't find 5 keys in jsonapi errors container")
 	}
 
-	for _, k := range []string{"id", "code", "status", "title"} {
+	for _, k := range []string{"id", "code", "status", "detail", "title"} {
 		if _, ok := m[k]; !ok {
 			t.Errorf("Missing key '%s' in JSONAPIError", k)
 		}
@@ -126,8 +173,8 @@ func TestErrorJSONAPI(t *testing.T) {
 
 func TestErrorsJSONAPI(t *testing.T) {
 	errs := make(Errors, 0, 2)
-	errs.AddError(ErrInternalServerError.New())
-	errs.AddError(ErrJSONSchemaValidationFailed.New())
+	errs.AddError(ErrInternalServerError.New(""))
+	errs.AddError(ErrJSONSchemaValidationFailed.New(""))
 
 	jsonapi_errs := errs.AsJSONAPIResponse()
 
@@ -158,8 +205,8 @@ func TestErrorsJSONAPI(t *testing.T) {
 
 func TestErrorsJSON(t *testing.T) {
 	errs := make(Errors, 0, 2)
-	errs.AddError(ErrJSONSchemaValidationFailed.New())
-	errs.AddError(ErrInternalServerError.New())
+	errs.AddError(ErrJSONSchemaValidationFailed.New(""))
+	errs.AddError(ErrInternalServerError.New(""))
 
 	jsonapi_errs := errs.AsJSONAPIResponse()
 
