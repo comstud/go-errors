@@ -3,7 +3,6 @@ package errors
 import (
 	"strings"
 
-	"github.com/comstud/go-rollbar/rollbar"
 	"github.com/pborman/uuid"
 )
 
@@ -13,7 +12,6 @@ type ErrIDGenerator interface {
 
 type config struct {
 	ErrIDGenerator ErrIDGenerator
-	RollbarClient  *rollbar.Client
 }
 
 type defaultErrIDGenerator struct{}
