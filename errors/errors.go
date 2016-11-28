@@ -161,9 +161,13 @@ func (self *ErrorClass) StartWithStack(details string, skip int) *Error {
 
 // Interface that both Error and Errors satisfies
 type ErrorType interface {
+	GetName() string
+	GetDetails() string
 	GetStatus() int
+	GetTitle() string
 	AsJSON() (string, error)
 	AsJSONAPIResponse() *JSONAPIErrorResponse
+	GetStackTrace() StackTrace
 }
 
 // An instance of an error
@@ -185,6 +189,14 @@ func (self *Error) Commit(ctx context.Context) *Error {
 		hdlr.HandleNewError(ctx, self)
 	}
 	return self
+}
+
+func (self *Error) GetName() string {
+	return self.Name
+}
+
+func (self *Error) GetDetails() string {
+	return self.Details
 }
 
 func (self *Error) GetStatus() int {
@@ -250,6 +262,14 @@ func (self *Error) AsJSON() (string, error) {
 	return string(byt), nil
 }
 
+func (self *Error) GetStackTrace() StackTrace {
+	return self.StackTrace
+}
+
+func (self *Error) GetTitle() string {
+	return self.Title
+}
+
 type Errors []*Error
 
 func (self *Errors) AddError(err *Error) {
@@ -269,8 +289,36 @@ func (self Errors) AsJSON() (string, error) {
 	return string(byt), nil
 }
 
+func (self Errors) GetName() string {
+	if len(self) == 0 {
+		return ""
+	}
+	return self[0].Name
+}
+
+func (self Errors) GetDetails() string {
+	if len(self) == 0 {
+		return ""
+	}
+	return self[0].Details
+}
+
+func (self Errors) GetTitle() string {
+	if len(self) == 0 {
+		return ""
+	}
+	return self[0].Title
+}
+
+func (self Errors) GetStackTrace() StackTrace {
+	if len(self) == 0 {
+		return nil
+	}
+	return self[0].GetStackTrace()
+}
+
 func (self Errors) GetStatus() int {
-	if self == nil || len(self) == 0 {
+	if len(self) == 0 {
 		return 0
 	}
 	return self[0].GetStatus()
