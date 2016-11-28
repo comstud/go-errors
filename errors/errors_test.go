@@ -29,9 +29,9 @@ func toMap(t *testing.T, v interface{}) map[string]interface{} {
 }
 
 func TestIncludedErrors(t *testing.T) {
-	if len(defaultErrorManager.errorClasses) != 3 {
+	if len(defaultErrorManager.errorClasses) != 4 {
 		t.Errorf(
-			".errorClasses is not 3: %+v",
+			".errorClasses is not 4: %+v",
 			defaultErrorManager.errorClasses,
 		)
 	}
@@ -40,6 +40,7 @@ func TestIncludedErrors(t *testing.T) {
 		name := k[idx+1:]
 		if name != "ErrInternalServerError" &&
 			name != "ErrJSONSchemaValidationFailed" &&
+			name != "ErrRouteNotFound" &&
 			name != "ErrInternalError" {
 			t.Errorf("Unexpected error found in .errorClasses: %s", k)
 		}
@@ -52,9 +53,9 @@ func TestErrorClasses(t *testing.T) {
 	for _, cls := range classes {
 		found[cls.Name] = true
 	}
-	if len(found) != 3 {
+	if len(found) != 4 {
 		t.Errorf(
-			"ErrorClasses() didn't return 3 unique error classes: %+v",
+			"ErrorClasses() didn't return 4 unique error classes: %+v",
 			classes,
 		)
 	}
@@ -63,6 +64,7 @@ func TestErrorClasses(t *testing.T) {
 		name := k[idx+1:]
 		if name != "ErrInternalServerError" &&
 			name != "ErrJSONSchemaValidationFailed" &&
+			name != "ErrRouteNotFound" &&
 			name != "ErrInternalError" {
 			t.Errorf("Unexpected error found in ErrorClasses(): %s", k)
 		}
