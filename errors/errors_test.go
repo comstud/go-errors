@@ -1,11 +1,14 @@
 package errors
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+var Ctx context.Context = context.Background()
 
 type E1 struct{}
 
@@ -85,36 +88,36 @@ func TestInterface(t *testing.T) {
 }
 
 func TestStackTrace(t *testing.T) {
-	err := ErrInternalServerError.New("")
+	err := ErrInternalServerError.New(Ctx, "")
 	if err.StackTrace == nil {
 		t.Error("ErrInternalServerError.New: StackTrace is nil")
 	}
 
-	err = ErrJSONSchemaValidationFailed.New("")
+	err = ErrJSONSchemaValidationFailed.New(Ctx, "")
 	if err.StackTrace != nil {
 		t.Error("ErrJSONSchemaValidationFailed.New(): StackTrace is not nil")
 	}
 
-	err = ErrJSONSchemaValidationFailed.NewWithStack("", 0)
+	err = ErrJSONSchemaValidationFailed.NewWithStack(Ctx, "", 0)
 	if err.StackTrace == nil {
 		t.Error("ErrJSONSchemaValidationFailed.NewWithStack(): StackTrace is nil")
 	}
 }
 
 func TestNewWithDetails(t *testing.T) {
-	err := ErrInternalServerError.New("test1")
+	err := ErrInternalServerError.New(Ctx, "test1")
 	if err.Details != "test1" {
 		t.Error("Details not set correctly")
 	}
 
-	err = ErrInternalServerError.NewWithStack("test2", 0)
+	err = ErrInternalServerError.NewWithStack(Ctx, "test2", 0)
 	if err.Details != "test2" {
 		t.Error("Details not set correctly")
 	}
 }
 
 func TestSetInternal(t *testing.T) {
-	err := ErrInternalServerError.New("").SetInternal("test")
+	err := ErrInternalServerError.Start("").SetInternal("test").Commit(Ctx)
 	if err.InternalDetails.(string) != "test" {
 		t.Error("InternalDetails not set correctly")
 	}
@@ -122,7 +125,7 @@ func TestSetInternal(t *testing.T) {
 		t.Error("InternalError not set correctly")
 	}
 
-	err = ErrInternalServerError.NewWithStack("", 0).SetInternal("test")
+	err = ErrInternalServerError.StartWithStack("", 0).SetInternal("test").Commit(Ctx)
 	if err.InternalDetails.(string) != "test" {
 		t.Error("InternalDetails not set correctly")
 	}
@@ -133,7 +136,7 @@ func TestSetInternal(t *testing.T) {
 	e1 := &E1{}
 	e2 := &E2{}
 
-	err = ErrInternalServerError.New("").SetInternal(e1)
+	err = ErrInternalServerError.Start("").SetInternal(e1).Commit(Ctx)
 	if err.InternalDetails.(*E1) != e1 {
 		t.Error("InternalDetails not set correctly from e1")
 	}
@@ -141,7 +144,7 @@ func TestSetInternal(t *testing.T) {
 		t.Error("InternalError not set correctly from e1.Error()")
 	}
 
-	err = ErrInternalServerError.New("").SetInternal(e2)
+	err = ErrInternalServerError.Start("").SetInternal(e2).Commit(Ctx)
 	if err.InternalDetails.(*E2) != e2 {
 		t.Error("InternalDetails not set correctly from e2")
 	}
@@ -151,7 +154,7 @@ func TestSetInternal(t *testing.T) {
 }
 
 func TestErrorAsJSON(t *testing.T) {
-	err := ErrInternalServerError.New(
+	err := ErrInternalServerError.Start(
 		"details",
 	).SetInternal(
 		"internal",
@@ -159,7 +162,7 @@ func TestErrorAsJSON(t *testing.T) {
 		make(map[string]interface{}),
 	).SetInternalMetadata(
 		make(map[string]interface{}),
-	)
+	).Commit(Ctx)
 	js, _ := err.AsJSON()
 	m := make(map[string]interface{})
 	e := json.Unmarshal([]byte(js), &m)
@@ -194,7 +197,7 @@ func TestErrorAsJSON(t *testing.T) {
 }
 
 func TestErrorJSONAPI(t *testing.T) {
-	err := ErrInternalServerError.New("details")
+	err := ErrInternalServerError.New(Ctx, "details")
 	jsonapi_err := err.AsJSONAPIError()
 
 	m := toMap(t, jsonapi_err)
@@ -217,8 +220,8 @@ func TestErrorJSONAPI(t *testing.T) {
 
 func TestErrorsJSONAPI(t *testing.T) {
 	errs := make(Errors, 0, 2)
-	errs.AddError(ErrInternalServerError.New(""))
-	errs.AddError(ErrJSONSchemaValidationFailed.New(""))
+	errs.AddError(ErrInternalServerError.New(Ctx, ""))
+	errs.AddError(ErrJSONSchemaValidationFailed.New(Ctx, ""))
 
 	jsonapi_errs := errs.AsJSONAPIResponse()
 
@@ -249,8 +252,8 @@ func TestErrorsJSONAPI(t *testing.T) {
 
 func TestErrorsJSON(t *testing.T) {
 	errs := make(Errors, 0, 2)
-	errs.AddError(ErrJSONSchemaValidationFailed.New(""))
-	errs.AddError(ErrInternalServerError.New(""))
+	errs.AddError(ErrJSONSchemaValidationFailed.New(Ctx, ""))
+	errs.AddError(ErrInternalServerError.New(Ctx, ""))
 
 	jsonapi_errs := errs.AsJSONAPIResponse()
 

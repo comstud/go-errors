@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"runtime"
@@ -20,9 +21,20 @@ func (self ErrIDGeneratorFn) GenErrID() string {
 	return self()
 }
 
+type NewErrorHandler interface {
+	HandleNewError(context.Context, ErrorType)
+}
+
+type NewErrorHandlerFn func(context.Context, ErrorType)
+
+func (self NewErrorHandlerFn) HandleNewError(ctx context.Context, err ErrorType) {
+	self(ctx, err)
+}
+
 type ErrorManager struct {
-	errorClasses   map[string]*ErrorClass
-	errIDGenerator ErrIDGenerator
+	errorClasses    map[string]*ErrorClass
+	errIDGenerator  ErrIDGenerator
+	newErrorHandler NewErrorHandler
 }
 
 func (self *ErrorManager) ErrorClasses() []ErrorClass {
@@ -31,6 +43,11 @@ func (self *ErrorManager) ErrorClasses() []ErrorClass {
 		classes = append(classes, *class)
 	}
 	return classes
+}
+
+func (self *ErrorManager) SetNewErrorHandler(handler NewErrorHandler) *ErrorManager {
+	self.newErrorHandler = handler
+	return self
 }
 
 func (self *ErrorManager) SetErrIDGenerator(generator ErrIDGenerator) *ErrorManager {
@@ -117,16 +134,28 @@ func (self *ErrorClass) newError(details string, forceFrames bool, skip int) *Er
 	return err
 }
 
-// Create an instance of an error
-// Create an instance of an error. Takes an optional argument to use to
-// set internal details
-func (self *ErrorClass) New(details string) *Error {
+// Create an instance of an error. This automatically 'commits' such
+// that the new error callback will be called, etc.
+func (self *ErrorClass) New(ctx context.Context, details string) *Error {
+	return self.newError(details, false, 1).Commit(ctx)
+}
+
+// Create an instance of an error. One must chain with Commit() to make
+// sure that any new error callback is called.
+func (self *ErrorClass) Start(details string) *Error {
 	return self.newError(details, false, 1)
 }
 
 // Create an instance of an error, including a stacktrace. 'skip' is how
+// many stack frames to skip. This automatically 'commits' such that
+// the new error callback will be called, etc.
+func (self *ErrorClass) NewWithStack(ctx context.Context, details string, skip int) *Error {
+	return self.newError(details, true, 1+skip).Commit(ctx)
+}
+
+// Create an instance of an error, including a stacktrace. 'skip' is how
 // many stack frames to skip.
-func (self *ErrorClass) NewWithStack(details string, skip int) *Error {
+func (self *ErrorClass) StartWithStack(details string, skip int) *Error {
 	return self.newError(details, true, 1+skip)
 }
 
@@ -149,6 +178,13 @@ type Error struct {
 	InternalError    string                 `json:"internal_error,omitempty"`
 	InternalDetails  interface{}            `json:"internal_details,omitempty"`
 	InternalMetadata map[string]interface{} `json:"internal_metadata,omitempty"`
+}
+
+func (self *Error) Commit(ctx context.Context) *Error {
+	if hdlr := self.errorManager.newErrorHandler; hdlr != nil {
+		hdlr.HandleNewError(ctx, self)
+	}
+	return self
 }
 
 func (self *Error) GetStatus() int {
