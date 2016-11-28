@@ -29,16 +29,42 @@ func toMap(t *testing.T, v interface{}) map[string]interface{} {
 }
 
 func TestIncludedErrors(t *testing.T) {
-	if len(RegisteredErrors) != 3 {
-		t.Errorf("Registered errors is not 3: %+v", RegisteredErrors)
+	if len(defaultErrorManager.errorClasses) != 3 {
+		t.Errorf(
+			".errorClasses is not 3: %+v",
+			defaultErrorManager.errorClasses,
+		)
 	}
-	for k, _ := range RegisteredErrors {
+	for k, _ := range defaultErrorManager.errorClasses {
 		idx := strings.LastIndex(k, ".")
 		name := k[idx+1:]
 		if name != "ErrInternalServerError" &&
 			name != "ErrJSONSchemaValidationFailed" &&
 			name != "ErrInternalError" {
-			t.Errorf("Unexpected error registered: %s", k)
+			t.Errorf("Unexpected error found in .errorClasses: %s", k)
+		}
+	}
+}
+
+func TestErrorClasses(t *testing.T) {
+	classes := defaultErrorManager.ErrorClasses()
+	found := make(map[string]bool)
+	for _, cls := range classes {
+		found[cls.Name] = true
+	}
+	if len(found) != 3 {
+		t.Errorf(
+			"ErrorClasses() didn't return 3 unique error classes: %+v",
+			classes,
+		)
+	}
+	for k, _ := range found {
+		idx := strings.LastIndex(k, ".")
+		name := k[idx+1:]
+		if name != "ErrInternalServerError" &&
+			name != "ErrJSONSchemaValidationFailed" &&
+			name != "ErrInternalError" {
+			t.Errorf("Unexpected error found in ErrorClasses(): %s", k)
 		}
 	}
 }
